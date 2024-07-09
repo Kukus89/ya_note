@@ -21,6 +21,7 @@ class TestRoutes(TestCase):
         )
 
     def test_pages_availability_for_anonymous_client(self):
+        '''Страницы доступны неавторизованному пользователю'''
         urls = (
             ('notes:home'),
             ('users:login'),
@@ -33,6 +34,8 @@ class TestRoutes(TestCase):
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_pages_availability_for_author(self):
+        '''Страницы доступны авторизованному пользователю'''
+
         urls = (
             ('notes:add'),
             ('notes:list'),
@@ -47,6 +50,9 @@ class TestRoutes(TestCase):
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_availability_others_authors_notes_for_author(self):
+        '''Страницы редактирования удаления и просмотра заметки
+        недоступны другому пользователю'''
+
         users_statuses = (
             (self.author, HTTPStatus.OK),
             (self.notAuthor, HTTPStatus.NOT_FOUND),
@@ -65,6 +71,7 @@ class TestRoutes(TestCase):
                     self.assertEqual(response.status_code, status)
 
     def test_redirect_for_anonymous_client(self):
+        '''Перенаправление на страницу авторизации'''
         login_url = reverse('users:login')
         urls = (
             ('notes:add', None),

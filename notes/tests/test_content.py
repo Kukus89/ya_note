@@ -1,7 +1,6 @@
-from http import HTTPStatus
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import Client, TestCase
 from notes.models import Note
 from notes.forms import NoteForm
 
@@ -15,7 +14,11 @@ class TestContent(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.author = User.objects.create(username='author')
+        cls.authorClient = Client()
+        cls.authorClient.force_login(cls.author)
         cls.notAuthor = User.objects.create(username='notAuthor')
+        cls.notAuthorClient = Client()
+        cls.notAuthorClient.force_login(cls.notAuthor)
         cls.note = Note.objects.create(
             title='author Title',
             text='author text',
@@ -32,8 +35,7 @@ class TestContent(TestCase):
     def test_note_in_context(self):
         '''Тест: заметка пользователя передается со списком заметок
         в словаре "context"'''
-        self.client.force_login(self.author)
-        response = self.client.get(URL_NOTE_LIST)
+        response = self.authorClient.get(URL_NOTE_LIST)
         object_list = response.context['object_list']
         Note.objects.create(
             title='author Title',
@@ -41,17 +43,14 @@ class TestContent(TestCase):
             slug="authorSlugNew",
             author=self.author
         )
-        response = self.client.get(URL_NOTE_LIST)
+        response = self.authorClient.get(URL_NOTE_LIST)
         current_object_list = response.context['object_list']
         self.assertEqual(current_object_list.count(), object_list.count() + 1)
 
-    def test_notes_list(self):
-        '''Тест: заметки пользователей не смешиваются'''
-        self.client.force_login(self.author)
-        response = self.client.get(URL_NOTE_LIST)
+    def test_author_notes_and_not_author_notes_not_mix(self):
+        response = self.authorClient.get(URL_NOTE_LIST)
         object_list_author = response.context['object_list']
-        self.client.force_login(self.notAuthor)
-        response = self.client.get(URL_NOTE_LIST)
+        response = self.notAuthorClient.get(URL_NOTE_LIST)
         object_list_notAuthor = response.context['object_list']
         self.assertNotIn(object_list_author, object_list_notAuthor)
 
@@ -62,9 +61,8 @@ class TestContent(TestCase):
             ('notes:add', None),
             ('notes:edit', (self.note.slug,)),
         )
-        self.client.force_login(self.author)
         for name, args in urls:
             url = reverse(name, args=args)
-            response = self.client.get(url)
+            response = self.authorClient.get(url)
             self.assertIn('form', response.context)
             self.assertIsInstance(response.context['form'], NoteForm)
